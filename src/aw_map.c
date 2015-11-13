@@ -1,0 +1,93 @@
+/******************************************************************************
+ *                AtomWeb: An embedded web server                             *
+ *                                                                            *
+ * Copyright (c) 2015 Gong Ke                                                 *
+ * All rights reserved.                                                       *
+ *                                                                            *
+ * Redistribution and use in source and binary forms, with or without         *
+ * modification, are permitted provided that the following conditions are     *
+ * met:                                                                       *
+ * 1.Redistributions of source code must retain the above copyright notice,   *
+ * this list of conditions and the following disclaimer.                      *
+ * 2.Redistributions in binary form must reproduce the above copyright        *
+ * notice, this list of conditions and the following disclaimer in the        *
+ * documentation and/or other materials provided with the distribution.       *
+ * 3.Neither the name of the Gong Ke; nor the names of its contributors may   *
+ * be used to endorse or promote products derived from this software without  *
+ * specific prior written permission.                                         *
+ *                                                                            *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS    *
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,  *
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR     *
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR           *
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,      *
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,        *
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR         *
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF     *
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING       *
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS         *
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.               *
+ *****************************************************************************/
+
+#include <aw_debug.h>
+#include <aw_map.h>
+
+static const AW_MapNode*
+find_node (const AW_Map *map, const AW_Char *name, AW_Size len)
+{
+	return NULL;
+}
+
+const AW_Class*
+aw_map_lookup (const AW_Map *map, const AW_Char *path)
+{
+	const AW_Char *begin, *end, *ptr;
+	const AW_Map *base;
+	const AW_MapNode *ent;
+	AW_Size len;
+
+	AW_ASSERT(map);
+
+	if (!path) {
+		path = "index.html";
+	}
+
+	len = strlen(path);
+	begin = path;
+	end   = begin + len;
+
+	if (*begin == '/')
+		begin++;
+
+	base = map;
+
+	while (1) {
+		ptr = strchr(begin, '/');
+		if (ptr) {
+			len = ptr - begin;
+
+			ent = find_node(base, begin, len);
+			if (!ent || (ent->map_id == -1))
+				return NULL;
+
+			base  = &map[ent->map_id];
+			begin = ptr + 1;
+		} else {
+			len = end - begin;
+
+			if (len == 0) {
+				begin = "index.html";
+				len = strlen(begin);
+			}
+
+			ent = find_node(base, begin, len);
+			if (!ent || !ent->clazz)
+				return NULL;
+
+			return ent->clazz;
+		}
+	}
+
+	return NULL;
+}
+
