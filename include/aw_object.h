@@ -41,6 +41,7 @@ extern "C" {
 
 struct AW_Class_s {
 	AW_U32    flags;
+	char     *mime;
 	AW_Ptr    (*create) (AW_Session *sess);
 	AW_Result (*run) (AW_Session *sess, AW_Ptr data);
 	void      (*release) (AW_Ptr data);

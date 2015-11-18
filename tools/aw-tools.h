@@ -46,6 +46,7 @@ extern "C" {
 #include <string.h>
 #include <libgen.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <assert.h>
 
 #ifdef AW_DEBUG
@@ -92,8 +93,10 @@ extern "C" {
 	#define AW_FATAL(a)  abort()
 #endif
 
-extern void aw_str_concat (char **ptr, char *add);
-extern void aw_str_printf (char **ptr, const char *fmt, ...);
+extern void  aw_str_concat (char **ptr, char *add);
+extern void  aw_str_printf (char **ptr, const char *fmt, ...);
+extern char* aw_str_cname (const char *lname, char *cbuf, int size);
+extern const char* aw_mime_get_type (const char *suffix);
 
 #ifdef __cplusplus
 }

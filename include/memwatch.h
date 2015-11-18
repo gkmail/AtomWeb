@@ -540,6 +540,7 @@ void* mwCalloc_( size_t, size_t );
 void  mwFree( void*, const char*, int );
 void  mwFree_( void* );
 char* mwStrdup( const char *, const char*, int );
+char* mwStrndup( const char *, size_t, const char*, int );
 
 /*
 ** Enable/disable precompiler block
@@ -575,8 +576,13 @@ char* mwStrdup( const char *, const char*, int );
 #undef strdup
 #endif
 
+#ifdef strndup
+#undef strndup
+#endif
+
 #define malloc(n)       mwMalloc(n,__FILE__,__LINE__)
 #define strdup(p)       mwStrdup(p,__FILE__,__LINE__)
+#define strndup(p, n)   mwStrndup(p,n,__FILE__,__LINE__)
 #define realloc(p,n)    mwRealloc(p,n,__FILE__,__LINE__)
 #define calloc(n,m)     mwCalloc(n,m,__FILE__,__LINE__)
 #define free(p)         mwFree(p,__FILE__,__LINE__)
@@ -629,6 +635,7 @@ extern void mwDummyTraceFunction(const char *,...);
 #define mwUnmark(p,f,n)     (p)
 #define mwMalloc(n,f,l)     malloc(n)
 #define mwStrdup(p,f,l)     strdup(p)
+#define mwStrndup(p,n,f,l)  strndup(p,n)
 #define mwRealloc(p,n,f,l)  realloc(p,n)
 #define mwCalloc(n,m,f,l)   calloc(n,m)
 #define mwFree(p)           free(p)

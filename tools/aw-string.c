@@ -63,7 +63,7 @@ aw_str_printf (char **ptr, const char *fmt, ...)
 		olen = *ptr ? strlen(*ptr) : 0;
 		nlen = olen + size + 1;
 
-		buf = (char*)malloc(nlen);
+		buf = (char*)malloc(nlen * sizeof(char));
 
 		if (*ptr) {
 			memcpy(buf, *ptr, olen);
@@ -78,3 +78,35 @@ aw_str_printf (char **ptr, const char *fmt, ...)
 	}
 }
 
+char*
+aw_str_cname (const char *lname, char *cbuf, int size)
+{
+	int len;
+	char *pcname, *ptr;
+
+	len = strlen(lname);
+	if ((len > 3) && !strcasecmp(lname + len - 3, ".aw")) {
+		strncpy(cbuf + 1, lname, len - 3);
+		cbuf[len - 2] = 0;
+	} else {
+		strcpy(cbuf + 1, lname);
+	}
+
+	pcname = cbuf + 1;
+
+	ptr = pcname;
+	if (!isalpha(*ptr) && (*ptr != '_')) {
+		cbuf[0] = '_';
+		pcname = cbuf;
+	}
+
+	while (*ptr) {
+		if (!isalnum(*ptr) && (*ptr != '_')) {
+			*ptr = '_';
+		}
+
+		ptr++;
+	}
+
+	return pcname;
+}

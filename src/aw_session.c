@@ -52,7 +52,7 @@ buf_resize (AW_Session *sess, AW_Size size)
 	if (size > 0)
 		nsize = AW_MAX(size, nsize);
 
-	nbuf = realloc(sess->buf, nsize);
+	nbuf = realloc(sess->buf, nsize * sizeof(AW_Char));
 	if (!nbuf) {
 		AW_FATAL(("not enough memory"));
 	}

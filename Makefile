@@ -38,21 +38,42 @@ include build/slib.mk
 TARGET:=aw-scanner
 SRCS:=tools/aw-scanner.c\
 	tools/aw-string.c
-ifeq ($(DEBUG),1)
+ifeq ($(MEMWATCH),1)
 SRCS+=src/memwatch.c
 endif
 include build/host_exe.mk
 
+TARGET:=aw-converter
+SRCS:=tools/aw-converter.c\
+	tools/aw-string.c\
+	tools/aw-mime.c
+ifeq ($(MEMWATCH),1)
+SRCS+=src/memwatch.c
+endif
+include build/host_exe.mk
+
+ifeq ($(SERVER_TEST),)
+server_test:
+	aw-scanner -m tests/server_test.mk -c tests/server_test_map.c tests/www
+	make SERVER_TEST=1 $(OUT)/server_test
+else
+-include tests/server_test.mk
+
 TARGET:=server_test
-SRCS:=tests/server_test.c
+SRCS:=tests/server_test.c\
+	tests/server_test_map.c\
+	$(AW_SRCS)
 SLIBS:=libatomweb
 include build/exe.mk
+endif
 
 TARGET:=uri_test
 SRCS:=tests/uri_test.c
 SLIBS:=libatomweb
 include build/exe.mk
 
+INSTALL_HOST_EXES:=aw-scanner aw-converter
+INSTALL_SLIBS:=libatomweb
 include build/install.mk
 
 include build/tail.mk

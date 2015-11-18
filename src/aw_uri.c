@@ -95,7 +95,7 @@ uri_decode (const AW_Char *str, AW_Size len, AW_Char **rstr)
 		return AW_OK;
 	}
 
-	dstr = (AW_Char*)malloc(len + 1);
+	dstr = (AW_Char*)malloc((len + 1) * sizeof(AW_Char));
 	if (!dstr) {
 		AW_FATAL(("not enough memory"));
 	}
