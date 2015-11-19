@@ -51,7 +51,8 @@ main (int argc, char **argv)
 	struct sockaddr_in addr;
 	int port = 80;
 	int r;
-
+	extern const AW_Map *aw_map;
+	
 	sa.sa_handler = handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -69,6 +70,8 @@ main (int argc, char **argv)
 
 	/*Create server*/
 	serv = aw_server_create();
+	aw_server_set_map(serv, aw_map);
+
 	serv_sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	addr.sin_family = AF_INET;

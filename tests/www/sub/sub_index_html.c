@@ -15,6 +15,14 @@ static AW_Ptr aw_create (AW_Session *sess) {
 
 static AW_Result aw_run (AW_Session *sess, AW_Ptr ptr) {
 	AW_UserData *udata = (AW_UserData*)ptr;
+
+#line 1 "tests/www/sub/index.html.aw"
+	aw_session_entity(sess, "<html>\n"
+		"This is a sub directory\n"
+		"<button onclick=\"window.location.href=\'page1.html\'\">next</button>\n"
+		"</html>\n"
+		""
+		, 105);
 	udata = udata;
 	return AW_OK;
 }

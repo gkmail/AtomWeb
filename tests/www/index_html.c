@@ -3,11 +3,6 @@
 #include <atomweb.h>
 
 typedef struct {
-
-#line 1 "tests/www/index.html.aw"
-
-	int         id;
-	const char *name;
 } AW_UserData;
 
 static AW_Ptr aw_create (AW_Session *sess) {
@@ -15,31 +10,31 @@ static AW_Ptr aw_create (AW_Session *sess) {
 	AW_UserData *udata;
 	udata = (AW_UserData*)malloc(sizeof(AW_UserData));
 	ptr = (AW_Ptr)udata;
-
-#line 5 "tests/www/index.html.aw"
-
-	udata->id = strtol(aw_session_get_param(sess, "id"), NULL, 0);
-	udata->name = aw_session_get_param(sess, "name");
 	return ptr;
 }
 
 static AW_Result aw_run (AW_Session *sess, AW_Ptr ptr) {
 	AW_UserData *udata = (AW_UserData*)ptr;
 
-#line 8 "tests/www/index.html.aw"
-	aw_session_entity(sess, "\n"
-		"<html>\n"
-		""
-		, 8);
-
-#line 10 "tests/www/index.html.aw"
-	aw_session_printf(sess,  "name:%s id:%d", udata->name, udata->id );
-
-#line 10 "tests/www/index.html.aw"
-	aw_session_entity(sess, "\n"
+#line 1 "tests/www/index.html.aw"
+	aw_session_entity(sess, "<html>\n"
+		"Welcome to Atom Web\n"
+		"<form action=\"page1.html\">\n"
+		"  <label for=\"name\">Name:</label>\n"
+		"  <input type=\"text\" name=\"name\" id=\"name\" />\n"
+		"  <br/>\n"
+		"  <label for=\"male\">Male:</label>\n"
+		"  <input type=\"checkbox\" name=\"male\" id=\"male\" />\n"
+		"  <br/>\n"
+		"  <label for=\"age\">Age:</label>\n"
+		"  <input type=\"number\" name=\"age\" id=\"age\" />\n"
+		"  <br/>\n"
+		"  <input type=\"reset\" />\n"
+		"  <input type=\"submit\" />\n"
+		"</form>\n"
 		"</html>\n"
 		""
-		, 9);
+		, 387);
 	udata = udata;
 	return AW_OK;
 }

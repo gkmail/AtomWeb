@@ -141,6 +141,7 @@ clear_node (Node *parent)
 
 		clear_node(c);
 
+		free(c->fname);
 		free(c->name);
 		free(c->dir);
 
@@ -519,14 +520,15 @@ gen_map (void)
 		fprintf(fp, "};\n");
 	}
 
-	fprintf(fp, "const AW_Map aw_map[] = {\n");
+	fprintf(fp, "static const AW_Map aw_maps[] = {\n");
 	for (i = 0; i < md.elem; i++) {
 		fprintf(fp, "\t{aw_map_nodes_%d, aw_map_links_%d}", i, i);
 		if (i != md.elem - 1)
 			fprintf(fp, ",");
 		fprintf(fp, "\n");
 	}
-	fprintf(fp, "};\n\n");
+	fprintf(fp, "};\n");
+	fprintf(fp, "const AW_Map *aw_map = aw_maps;\n\n");
 
 	for (i = 0; i < md.elem; i++) {
 		map = &md.maps[i];
@@ -553,8 +555,6 @@ gen_map (void)
 		free(md.maps);
 	if (md.classes)
 		free(md.classes);
-	if (md.maps)
-		free(md.maps);
 
 	fclose(fp);
 

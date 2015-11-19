@@ -49,8 +49,9 @@ static const AW_MapLink aw_map_links_1[] = {
 	{50, 4, 6},
 	{105, 0, 7}
 };
-const AW_Map aw_map[] = {
+static const AW_Map aw_maps[] = {
 	{aw_map_nodes_0, aw_map_links_0},
 	{aw_map_nodes_1, aw_map_links_1}
 };
+const AW_Map *aw_map = aw_maps;
 

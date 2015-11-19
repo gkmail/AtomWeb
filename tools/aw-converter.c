@@ -167,10 +167,10 @@ output_other (const char *text)
 				fprintf(output, "\\\\");
 				break;
 			case '\'':
-				fprintf(output, "\\'");
+				fprintf(output, "\\\'");
 				break;
 			case '\"':
-				fprintf(output, "\\'");
+				fprintf(output, "\\\"");
 				break;
 			case '\t':
 				fprintf(output, "\\t");
@@ -505,6 +505,7 @@ getch_c_upper (void)
 			return T_END;
 		else
 			unget(c);
+		append_char('?');
 	} else {
 		append_char(r);
 	}
