@@ -54,7 +54,7 @@ include build/host_exe.mk
 
 ifeq ($(SERVER_TEST),)
 server_test:
-	aw-scanner -m tests/server_test.mk -c tests/server_test_map.c tests/www
+	aw-scanner -m tests/server_test.mk -c tests/server_test_map.c -o tests tests/www
 	make SERVER_TEST=1 $(OUT)/server_test
 else
 -include tests/server_test.mk

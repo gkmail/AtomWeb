@@ -39,21 +39,46 @@ extern "C" {
 #include "aw_types.h"
 #include "aw_hash.h"
 
+/**\brief URI*/
 struct AW_Uri_s {
-	AW_Char *chars;
-	AW_Char *proto;
-	AW_Char *user;
-	AW_Char *host;
-	AW_Char *path;
-	AW_U16   port;
-	AW_Hash  query_hash;
+	AW_Char *chars; /**< URI string*/
+	AW_Char *proto; /**< Prototype*/
+	AW_Char *user;  /**< User and password*/
+	AW_Char *host;  /**< Host name*/
+	AW_Char *path;  /**< Path*/
+	AW_U16   port;  /**< Port number*/
+	AW_Hash  query_hash; /**< Query parameters hash table*/
 };
 
+/**
+ * \brief URI data initialize
+ * \param[in] uri URI data
+ */
 extern void      aw_uri_init (AW_Uri *uri);
+
+/**
+ * \brief URI data release
+ * \param[in] uri URI data
+ */
 extern void      aw_uri_deinit (AW_Uri *uri);
+
+/**
+ * \brief Parse the string to URI value
+ * \param[in] uri URI data
+ * \param[in] str URI string
+ */
 extern AW_Result aw_uri_parse (AW_Uri *uri, const AW_Char *str);
+
+/**
+ * \brief Get parameter value from query hash table
+ * \param[in] uri URI data
+ * \param[in] name The parameter's name
+ * \return The parameter's value
+ * \retval NULL If the parameter has not been defined
+ */
 extern const AW_Char* aw_uri_get_query (AW_Uri *uri,
 						const AW_Char *name);
+
 extern AW_Result aw_parse_params (const AW_Char *str, AW_Hash *hash);
 
 #ifdef __cplusplus

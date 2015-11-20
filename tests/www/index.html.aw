@@ -1,6 +1,8 @@
 <html>
 Welcome to Atom Web
 <form action="page1.html">
+  <img src="nobody.png"/>
+  <br/>
   <label for="name">Name:</label>
   <input type="text" name="name" id="name" />
   <br/>

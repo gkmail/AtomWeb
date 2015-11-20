@@ -63,6 +63,9 @@ aw_server_create (void)
 	serv->recv = aw_default_recv;
 	serv->send = aw_default_send;
 
+	serv->send_limit = -1;
+	serv->recv_limit = -1;
+
 	serv->methods[AW_METHOD_GET]  = aw_default_get;
 	serv->methods[AW_METHOD_POST] = aw_default_post;
 
@@ -105,5 +108,21 @@ aw_server_set_map (AW_Server *serv, const AW_Map *map)
 	AW_ASSERT(serv);
 
 	serv->map = map;
+}
+
+void
+aw_server_set_send_limit (AW_Server *serv, AW_Size lim)
+{
+	AW_ASSERT(serv);
+
+	serv->send_limit = lim;
+}
+
+void
+aw_server_set_recv_limit (AW_Server *serv, AW_Size lim)
+{
+	AW_ASSERT(serv);
+
+	serv->recv_limit = lim;
 }
 

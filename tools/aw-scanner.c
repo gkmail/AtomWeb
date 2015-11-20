@@ -34,6 +34,7 @@
 typedef struct Node_s Node;
 struct Node_s {
 	int   is_dir;
+	int   is_bin;
 	Node *child;
 	Node *next;
 	char *name;
@@ -45,6 +46,7 @@ struct Node_s {
 static char *dir_name = NULL;
 static char *dep_name = NULL;
 static char *map_name = NULL;
+static char *out_dir  = NULL;
 static Node  root_node;
 
 static const char* usage_str =
@@ -53,6 +55,7 @@ static const char* usage_str =
 "options:\n"
 "\t-m FILE     generate makefile dependencies file\n"
 "\t-c FILE     generate atom web map source file\n"
+"\t-o DIR      source files output directory\n"
 "\t-h          show this message\n"
 ;
 
@@ -67,13 +70,16 @@ parse_args (int argc, char **argv)
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "m:c:h")) != -1) {
+	while ((opt = getopt(argc, argv, "m:c:o:h")) != -1) {
 		switch (opt) {
 			case 'm':
 				dep_name = optarg;
 				break;
 			case 'c':
 				map_name = optarg;
+				break;
+			case 'o':
+				out_dir = optarg;
 				break;
 			case 'h':
 				usage();
@@ -113,8 +119,10 @@ alloc_node (Node *parent, int dir, const char *dname, const char *name,
 	len = strlen(name);
 	if ((len > 3) && !strcasecmp(name + len - 3, ".aw")) {
 		n->name = strndup(name, len - 3);
+		n->is_bin = 0;
 	} else {
 		n->name = strdup(name);
+		n->is_bin = 1;
 	}
 
 	if (dir) {
@@ -204,9 +212,6 @@ scan_dir (const char *dname, const char *fname, Node *parent)
 
 				suffix = strrchr(ent->d_name, '.');
 				if (!suffix)
-					continue;
-
-				if (strcasecmp(suffix, ".aw"))
 					continue;
 
 				add_file(parent, dname, ent->d_name, name);
@@ -575,13 +580,19 @@ gen_node_dep (Node *node, DepData *dd)
 		gen_node_dep(c, dd);
 
 		if (!c->is_dir) {
-			aw_str_printf(&dd->rules, "%s/%s.c: %s/%s %s\n",
-						c->dir, c->cname, c->dir, c->fname,
+			aw_str_printf(&dd->rules, "%s%s%s.c: %s/%s %s\n",
+						out_dir ? out_dir : "",
+						out_dir ? "/" : "",
+						c->cname, c->dir, c->fname,
 						dep_name ? dep_name : "");
-			aw_str_printf(&dd->rules, "\t$(AW_CONVERTER) -o $@ -c %s $<\n\n",
+			aw_str_printf(&dd->rules,
+						"\t$(AW_CONVERTER) -o $@ -c %s %s $<\n\n",
+						c->cname,
+						c->is_bin ? "-b" : "");
+			aw_str_printf(&dd->srcs, "%s%s%s.c ",
+						out_dir ? out_dir : "",
+						out_dir ? "/" : "",
 						c->cname);
-			aw_str_printf(&dd->srcs, "%s/%s.c ",
-						c->dir, c->cname);
 		}
 	}
 }
