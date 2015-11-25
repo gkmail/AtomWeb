@@ -29,34 +29,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.               *
  *****************************************************************************/
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <atomweb.h>
 
+#ifdef AW_MINGW
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+typedef int socklen_t;
+#endif
+
+#ifdef AW_LINUX
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+
+#ifdef AW_LINUX
 static void
 handler(int sig)
 {
 }
+#endif
 
 int
 main (int argc, char **argv)
 {
+#ifdef AW_LINUX
 	struct sigaction sa;
+#endif
+#ifdef AW_MINGW
+	WSADATA wsa_data;
+#endif
+	struct sockaddr_in addr;
 	AW_Server *serv;
 	int serv_sock = -1;
-	struct sockaddr_in addr;
 	int port = 80;
 	int r;
-
+	extern const AW_Map *aw_map;
+	
+#ifdef AW_LINUX
 	sa.sa_handler = handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 
 	sigaction(SIGINT, &sa, NULL);
+#endif
+
+#ifdef AW_MINGW
+	if(WSAStartup(MAKEWORD(2, 0), &wsa_data) != 0){
+		fprintf(stderr, "winsock2 startup failed\n");
+		return 1;
+	}
+#endif
 
 	/*Get port number*/
 	if (argc > 1) {
@@ -69,6 +96,8 @@ main (int argc, char **argv)
 
 	/*Create server*/
 	serv = aw_server_create();
+	aw_server_set_map(serv, aw_map);
+
 	serv_sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	addr.sin_family = AF_INET;
@@ -122,5 +151,9 @@ end:
 	fprintf(stderr, "close the server\n");
 	close(serv_sock);
 	aw_server_destroy(serv);
+
+#ifdef AW_MINGW
+	WSACleanup();
+#endif
 	return 0;
 }

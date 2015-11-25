@@ -36,6 +36,7 @@
 extern "C" {
 #endif
 
+#define AW_LINUX  1
 #define AW_64BITS 1
 
 #include "gnu_config.h"

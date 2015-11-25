@@ -52,7 +52,7 @@ buf_resize (AW_Session *sess, AW_Size size)
 	if (size > 0)
 		nsize = AW_MAX(size, nsize);
 
-	nbuf = realloc(sess->buf, nsize);
+	nbuf = realloc(sess->buf, nsize * sizeof(AW_Char));
 	if (!nbuf) {
 		AW_FATAL(("not enough memory"));
 	}
@@ -436,6 +436,8 @@ aw_session_create (AW_Server *serv, AW_Ptr sock)
 	sess->pos  = 0;
 	sess->buf_size = 0;
 	sess->flags = 0;
+	sess->send  = 0;
+	sess->recv  = 0;
 
 	aw_manager_init(&sess->man);
 	aw_uri_init(&sess->uri);
@@ -579,6 +581,8 @@ aw_session_add_response (AW_Session *sess, const AW_Char *key,
 AW_Size
 aw_session_recv (AW_Session *sess, AW_Char *buf, AW_Size size)
 {
+	AW_Size cnt;
+
 	AW_ASSERT(sess);
 
 	if (sess->flags & AW_SESSION_FL_ERROR)
@@ -586,23 +590,70 @@ aw_session_recv (AW_Session *sess, AW_Char *buf, AW_Size size)
 	if (sess->flags & AW_SESSION_FL_END)
 		return 0;
 
-	return sess->serv->recv(sess->sock, buf, size);
+	cnt = sess->serv->recv(sess->sock, buf, size);
+
+	if (cnt > 0) {
+		sess->recv += cnt;
+	}
+
+	if ((sess->serv->recv_limit > 0) &&
+				(sess->recv >= sess->serv->recv_limit)) {
+		cnt = AW_ERR_TOOBIG;
+	}
+
+	if (cnt <= 0) {
+		sess->flags |= AW_SESSION_FL_END;
+
+		if (cnt < 0)
+			sess->flags |= AW_SESSION_FL_ERROR;
+	}
+
+	return cnt;
 }
 
 AW_Size
 aw_session_send (AW_Session *sess, const AW_Char *buf, AW_Size size)
 {
+	const AW_Char *bytes;
+	AW_Size left;
+	AW_Size cnt = 0;
+
 	AW_ASSERT(sess);
 
 	if (sess->flags & AW_SESSION_FL_ERROR)
 		return AW_FAILED;
 	if (sess->flags & AW_SESSION_FL_END)
-		return 0;
+		return AW_FAILED;
 
 	if (size == -1)
 		size = strlen(buf);
 
-	return sess->serv->send(sess->sock, buf, size);
+	bytes = buf;
+	left  = size;
+
+	while (left) {
+		cnt = sess->serv->send(sess->sock, bytes, left);
+
+		if (cnt > 0) {
+			sess->send += cnt;
+		}
+
+		if ((sess->serv->send_limit > 0) &&
+					(sess->send >= sess->serv->send_limit)) {
+			cnt = AW_ERR_TOOBIG;
+		}
+
+		if (cnt < 0) {
+			sess->flags |= AW_SESSION_FL_END;
+			sess->flags |= AW_SESSION_FL_ERROR;
+			break;
+		}
+
+		left  -= cnt;
+		bytes += cnt;
+	}
+
+	return cnt;
 }
 
 AW_Result
@@ -611,6 +662,7 @@ aw_default_get (AW_Session *sess, AW_Method method)
 	char buf[64];
 	const AW_Char *path = NULL;
 	const AW_Class *clazz = NULL;
+	AW_Char *out_buf;
 	AW_Object *obj;
 	AW_Size begin, len;
 	AW_Result r;
@@ -630,24 +682,40 @@ aw_default_get (AW_Session *sess, AW_Method method)
 		return AW_FAILED;
 	}
 
-	obj = aw_object_create(sess, clazz);
-	if ((r = aw_object_run(obj)) != AW_OK) {
-		send_resp(sess, 500);
-		return r;
+	if (!(clazz->flags & AW_CLASS_FL_BINARY)) {
+		obj = aw_object_create(sess, clazz);
+		if ((r = aw_object_run(obj)) != AW_OK) {
+			send_resp(sess, 500);
+			return r;
+		}
 	}
 
 	send_resp(sess, 200);
 	aw_hash_for_each(&sess->resp_hash, send_resp_header, sess);
 
-	begin = sess->pos;
-	len   = sess->len;
+	if (!(clazz->flags & AW_CLASS_FL_BINARY)) {
+		begin = sess->pos;
+		len   = sess->len;
+		out_buf = sess->buf;
+	} else {
+		begin = 0;
+		len   = clazz->size;
+		out_buf = (char*)clazz->data;
+	}
+
 	sprintf(buf, "%d", len);
 	send_resp_header("Content-Length", buf, sess);
+	send_resp_header("Connection", "Close", sess);
 
-	aw_session_send(sess, "\r\n\r\n", 4);
+	if (clazz->mime) {
+		send_resp_header("Content-Type", clazz->mime, sess);
+	}
 
-	if (sess->len) {
-		aw_session_send(sess, sess->buf + begin, len);
+	aw_session_send(sess, "\r\n", 2);
+
+	if (len) {
+		aw_session_send(sess, out_buf + begin, len);
+		AW_INFO(("send %d", len));
 	}
 
 	return AW_OK;

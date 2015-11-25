@@ -1051,6 +1051,32 @@ char *mwStrdup( const char* str, const char* file, int line ) {
     return newstring;
     }
 
+char *mwStrndup( const char* str, size_t n, const char* file, int line ) {
+    size_t len;
+    char *newstring;
+
+	MW_MUTEX_LOCK();
+
+    if( str == NULL ) {
+        mwIncErr();
+        mwWrite( "strdup: <%ld> %s(%d), strdup(NULL) called\n",
+            mwCounter, file, line );
+        FLUSH();
+		MW_MUTEX_UNLOCK();
+        return NULL;
+        }
+
+    len = n + 1;
+    newstring = (char*) mwMalloc( len, file, line );
+    if( newstring != NULL ) {
+		memcpy( newstring, str, n );
+		newstring[n] = 0;
+	}
+	MW_MUTEX_UNLOCK();
+    return newstring;
+    }
+
+
 void mwFree( void* p, const char* file, int line ) {
     int i;
     mwData* mw;

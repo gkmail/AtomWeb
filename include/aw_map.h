@@ -38,27 +38,40 @@ extern "C" {
 
 #include "aw_types.h"
 
+/**\brief Map node link*/
 typedef struct AW_MapLink_s AW_MapLink;
+/**\brief Map node*/
 typedef struct AW_MapNode_s AW_MapNode;
 
+/**\brief Map node link*/
 struct AW_MapLink_s {
-	AW_Char   chr;
-	int       next;
-	int       node;
+	AW_Char   chr;  /**< The character*/
+	int       next; /**< The next link in the list*/
+	int       node; /**< The destination node*/
 };
 
+/**\brief Map node*/
 struct AW_MapNode_s {
-	int       links;
-	int       map_id;
-	const char     *name;
-	const AW_Class *clazz;
+	int       links;  /**< Links list*/
+	int       map_id; /**< The sub directory's map index*/
+	const char     *name;  /**< Name of the object*/
+	const AW_Class *clazz; /**< The class of the object*/
 };
 
+/**
+ * \brief Web object map
+ * Use the map to lookup object by the path name.
+ */
 struct AW_Map_s {
-	const AW_MapNode *nodes;
-	const AW_MapLink *links;
+	const AW_MapNode *nodes; /**< Nodes array*/
+	const AW_MapLink *links; /**< Links array*/
 };
 
+/**
+ * \brief Lookup a web object use the map
+ * \param[in] map The web objects' map
+ * \param[in] path The object's path name
+ */
 extern const AW_Class* aw_map_lookup (const AW_Map *map, const AW_Char *path);
 
 #ifdef __cplusplus

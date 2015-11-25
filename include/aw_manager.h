@@ -39,17 +39,46 @@ extern "C" {
 #include "aw_types.h"
 #include "aw_hash.h"
 
+/**\brief Resource manager*/
 struct AW_Manager_s {
-	AW_Hash  res_hash;
+	AW_Hash  res_hash; /**< Resource hash table*/
 };
 
+/**
+ * \brief Resource manager initialize
+ * \param[in] man Resource manager
+ */
 extern void   aw_manager_init (AW_Manager *man);
+
+/**
+ * \brief Resource manager release
+ * \param[in] man Resource manager
+ */
 extern void   aw_manager_deinit (AW_Manager *man);
+
+/**
+ * \brief Add a resource object into the manager
+ * \param[in] man Resource manager
+ * \param[in] ptr Pointer of the resource
+ * \param Resource release function
+ */
 extern void   aw_manager_add_res (AW_Manager *man,
 				AW_Ptr ptr,
-				AW_FreeFunc free);
+				AW_FreeFunc release);
+
+/**
+ * \brief Release a resource object in the manager
+ * \param[in] man Resource manager
+ * \param[in] ptr Pointer of the resource
+ */
 extern void   aw_manager_remove_res (AW_Manager *man,
 				AW_Ptr ptr);
+
+/**
+ * \brief Allocate a memory buffer and store it in the manager
+ * \param[in] man Resource manager
+ * \param size Buffer size in bytes
+ */
 extern AW_Ptr aw_manager_alloc (AW_Manager *man,
 				AW_Size size);
 

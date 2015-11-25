@@ -34,9 +34,11 @@
 typedef struct Node_s Node;
 struct Node_s {
 	int   is_dir;
+	int   is_bin;
 	Node *child;
 	Node *next;
 	char *name;
+	char *fname;
 	char *cname;
 	char *dir;
 };
@@ -44,6 +46,7 @@ struct Node_s {
 static char *dir_name = NULL;
 static char *dep_name = NULL;
 static char *map_name = NULL;
+static char *out_dir  = NULL;
 static Node  root_node;
 
 static const char* usage_str =
@@ -52,6 +55,7 @@ static const char* usage_str =
 "options:\n"
 "\t-m FILE     generate makefile dependencies file\n"
 "\t-c FILE     generate atom web map source file\n"
+"\t-o DIR      source files output directory\n"
 "\t-h          show this message\n"
 ;
 
@@ -66,13 +70,16 @@ parse_args (int argc, char **argv)
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "m:c:h")) != -1) {
+	while ((opt = getopt(argc, argv, "m:c:o:h")) != -1) {
 		switch (opt) {
 			case 'm':
 				dep_name = optarg;
 				break;
 			case 'c':
 				map_name = optarg;
+				break;
+			case 'o':
+				out_dir = optarg;
 				break;
 			case 'h':
 				usage();
@@ -93,39 +100,40 @@ parse_args (int argc, char **argv)
 }
 
 static Node*
-alloc_node (Node *parent, int dir, const char *dname, const char *name)
+alloc_node (Node *parent, int dir, const char *dname, const char *name,
+			const char *lname)
 {
-	char *ptr, *nptr;
 	Node *n;
+	int len;
 
 	n = (Node*)malloc(sizeof(Node));
 	AW_ASSERT(n);
 
 	n->is_dir = dir;
-	n->name   = strdup(name);
+	n->fname  = strdup(name);
 	n->dir    = strdup(dname);
 	n->child  = NULL;
 	n->next   = parent->child;
 	parent->child = n;
 
+	len = strlen(name);
+	if ((len > 3) && !strcasecmp(name + len - 3, ".aw")) {
+		n->name = strndup(name, len - 3);
+		n->is_bin = 0;
+	} else {
+		n->name = strdup(name);
+		n->is_bin = 1;
+	}
+
 	if (dir) {
 		n->cname = NULL;
 	} else {
-		char cbuf[PATH_MAX];
+		char cbuf[PATH_MAX + 1];
+		char *pcname;
 
-		strcpy(cbuf, name);
+		pcname = aw_str_cname(lname, cbuf, sizeof(cbuf));
 
-		ptr = cbuf;
-		while (1) {
-			nptr = strchr(ptr, '.');
-			if (nptr) {
-				*nptr = '_';
-			} else {
-				break;
-			}
-		}
-
-		n->cname = strdup(cbuf);
+		n->cname = strdup(pcname);
 	}
 
 	return n;
@@ -141,6 +149,7 @@ clear_node (Node *parent)
 
 		clear_node(c);
 
+		free(c->fname);
 		free(c->name);
 		free(c->dir);
 
@@ -152,25 +161,26 @@ clear_node (Node *parent)
 }
 
 static Node*
-add_file (Node *parent, const char *dir, const char *name)
+add_file (Node *parent, const char *dir, const char *name, const char *lname)
 {
 	AW_INFO(("add file \"%s\"", name));
-	return alloc_node(parent, 0, dir, name);
+	return alloc_node(parent, 0, dir, name, lname);
 }
 
 static Node*
-add_dir (Node *parent, const char *dir, const char *name)
+add_dir (Node *parent, const char *dir, const char *name, const char *lname)
 {
 	AW_INFO(("add directory \"%s\"", name));
-	return alloc_node(parent, 1, dir, name);
+	return alloc_node(parent, 1, dir, name, lname);
 }
 
 static void
-scan_dir (const char *dname, Node *parent)
+scan_dir (const char *dname, const char *fname, Node *parent)
 {
 	DIR *dir;
 	struct dirent *ent;
 	char path[PATH_MAX];
+	char name[PATH_MAX];
 	struct stat sbuf;
 	int r;
 
@@ -186,18 +196,30 @@ scan_dir (const char *dname, Node *parent)
 			if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 				continue;
 
+			if (fname) {
+				snprintf(name, sizeof(name), "%s/%s", fname, ent->d_name);
+			} else {
+				snprintf(name, sizeof(name), "%s", ent->d_name);
+			}
+
 			snprintf(path, sizeof(path), "%s/%s", dname, ent->d_name);
 
 			if ((r = stat(path, &sbuf)) == -1)
 				continue;
 
 			if (S_ISREG(sbuf.st_mode)) {
-				add_file(parent, dname, ent->d_name);
+				char *suffix;
+
+				suffix = strrchr(ent->d_name, '.');
+				if (!suffix)
+					continue;
+
+				add_file(parent, dname, ent->d_name, name);
 			} else if (S_ISDIR(sbuf.st_mode)) {
 				Node *child;
 
-				child = add_dir(parent, dname, ent->d_name);
-				scan_dir(path, child);
+				child = add_dir(parent, dname, ent->d_name, name);
+				scan_dir(path, name, child);
 			}
 		} else {
 			break;
@@ -324,38 +346,41 @@ gen_node_map (Node *node, MapData *md)
 
 	for (c = node->child; c; c = c->next) {
 		char *ptr, *end, chr;
-		int nn_id;
+		int n_id, nn_id;
 
 		ptr = c->name;
 		end = ptr + strlen(ptr);
+		n_id = node_id;
 
 		while (ptr < end) {
 			int link_id;
 
-			link_id = map->links[node_id];
+			link_id = map->links[n_id];
 			if (link_id == -1) {
-				if (map->name[node_id] && map->npos[node_id]) {
-					char *name = map->name[node_id];
-					int npos = map->npos[node_id];
+				if (map->name[n_id] && map->npos[n_id]) {
+					char *name = map->name[n_id];
+					int npos = map->npos[n_id];
 
 					chr = name[strlen(name) - npos];
 					nn_id = add_node(md, map_id);
-					add_link(md, map_id, node_id, nn_id, chr);
-					map->name[nn_id] = name;
-					map->npos[nn_id] = npos - 1;
+					add_link(md, map_id, n_id, nn_id, chr);
+					map->name[nn_id]  = name;
+					map->npos[nn_id]  = npos - 1;
+					map->clazz[nn_id] = map->clazz[n_id];
 
-					map->name[node_id] = NULL;
-					map->npos[node_id] = 0;
+					map->name[n_id]  = NULL;
+					map->npos[n_id]  = 0;
+					map->clazz[n_id] = NULL;
 
-					link_id = map->links[node_id];
+					link_id = map->links[n_id];
 				}
 			}
 
 			if (link_id == -1) {
-				if (map->name[node_id]) {
+				if (map->name[n_id]) {
 					nn_id = add_node(md, map_id);
-					add_link(md, map_id, node_id, nn_id, *ptr++);
-					node_id = nn_id;
+					add_link(md, map_id, n_id, nn_id, *ptr++);
+					n_id = nn_id;
 				}
 
 				break;
@@ -372,24 +397,24 @@ gen_node_map (Node *node, MapData *md)
 
 			if (nn_id == -1) {
 				nn_id = add_node(md, map_id);
-				add_link(md, map_id, node_id, nn_id, *ptr);
+				add_link(md, map_id, n_id, nn_id, *ptr);
 			}
 
-			node_id = nn_id;
+			n_id = nn_id;
 			ptr ++;
 		}
 
 		if (c->is_dir) {
-			map->child[node_id] = gen_node_map(c, md);
+			map->child[n_id] = gen_node_map(c, md);
 		} else {
-			map->clazz[node_id] = c->cname;
+			map->clazz[n_id] = c->cname;
 
 			aw_str_printf(&md->classes, "extern const AW_Class aw_%s_class;\n",
 						c->cname);
 		}
 
-		map->name[node_id] = c->name;
-		map->npos[node_id] = end - ptr;
+		map->name[n_id] = c->name;
+		map->npos[n_id] = end - ptr;
 	}
 
 	return map_id;
@@ -425,10 +450,58 @@ gen_map (void)
 	for (i = 0; i < md.elem; i++) {
 		map = &md.maps[i];
 
-		fprintf(fp, "static const AW_MapNode aw_map_nodes_%d = {\n", i);
+		fprintf(fp, "static const AW_MapNode aw_map_nodes_%d[] = {\n", i);
 			for (j = 0; j < map->node_elem; j++) {
 				fprintf(fp, "\t{%d, %d, ", map->links[j],
 							map->child[j]);
+
+				if (map->name[j]) {
+					char *ptr;
+
+					fprintf(fp, "\"");
+
+					ptr = map->name[j];
+					while (1) {
+						switch (*ptr) {
+							case '\t':
+								fprintf(fp, "\\t");
+								break;
+							case '\n':
+								fprintf(fp, "\\n");
+								break;
+							case '\r':
+								fprintf(fp, "\\r");
+								break;
+							case '\v':
+								fprintf(fp, "\\v");
+								break;
+							case '\f':
+								fprintf(fp, "\\f");
+								break;
+							case '\a':
+								fprintf(fp, "\\a");
+								break;
+							case '\b':
+								fprintf(fp, "\\b");
+								break;
+							default:
+								if (isprint(*ptr)) {
+									fprintf(fp, "%c", *ptr);
+								} else {
+									fprintf(fp, "\\x%02x", *ptr);
+								}
+						}
+
+						ptr ++;
+						if (! *ptr)
+							break;
+					}
+
+					fprintf(fp, "\", ");
+				} else {
+					fprintf(fp, "NULL, ");
+				}
+
 				if (map->clazz[j]) {
 					fprintf(fp, "&aw_%s_class", map->clazz[j]);
 				} else {
@@ -440,7 +513,7 @@ gen_map (void)
 				fprintf(fp, "\n");
 			}
 		fprintf(fp, "};\n");
-		fprintf(fp, "static const AW_MapLink aw_map_links_%d = {\n", i);
+		fprintf(fp, "static const AW_MapLink aw_map_links_%d[] = {\n", i);
 			for (j = 0; j < map->link_elem; j++) {
 				fprintf(fp, "\t{%d, %d, %d}", map->chr[j],
 							map->next[j],
@@ -452,14 +525,15 @@ gen_map (void)
 		fprintf(fp, "};\n");
 	}
 
-	fprintf(fp, "const AW_Map aw_map[] = {\n");
+	fprintf(fp, "static const AW_Map aw_maps[] = {\n");
 	for (i = 0; i < md.elem; i++) {
 		fprintf(fp, "\t{aw_map_nodes_%d, aw_map_links_%d}", i, i);
 		if (i != md.elem - 1)
 			fprintf(fp, ",");
 		fprintf(fp, "\n");
 	}
-	fprintf(fp, "};\n\n");
+	fprintf(fp, "};\n");
+	fprintf(fp, "const AW_Map *aw_map = aw_maps;\n\n");
 
 	for (i = 0; i < md.elem; i++) {
 		map = &md.maps[i];
@@ -486,8 +560,6 @@ gen_map (void)
 		free(md.maps);
 	if (md.classes)
 		free(md.classes);
-	if (md.maps)
-		free(md.maps);
 
 	fclose(fp);
 
@@ -508,11 +580,19 @@ gen_node_dep (Node *node, DepData *dd)
 		gen_node_dep(c, dd);
 
 		if (!c->is_dir) {
-			aw_str_printf(&dd->rules, "%s/%s.c: %s/%s\n",
-						c->dir, c->cname, c->dir, c->name);
-			aw_str_printf(&dd->rules, "\t$(AW_CONVERTER) -o $@ $<\n\n");
-			aw_str_printf(&dd->srcs, "%s/%s.c ",
-						c->dir, c->cname);
+			aw_str_printf(&dd->rules, "%s%s%s.c: %s/%s %s\n",
+						out_dir ? out_dir : "",
+						out_dir ? "/" : "",
+						c->cname, c->dir, c->fname,
+						dep_name ? dep_name : "");
+			aw_str_printf(&dd->rules,
+						"\t$(AW_CONVERTER) -o $@ -c %s %s $<\n\n",
+						c->cname,
+						c->is_bin ? "-b" : "");
+			aw_str_printf(&dd->srcs, "%s%s%s.c ",
+						out_dir ? out_dir : "",
+						out_dir ? "/" : "",
+						c->cname);
 		}
 	}
 }
@@ -561,7 +641,7 @@ main (int argc, char **argv)
 	memset(&root_node, 0, sizeof(root_node));
 	root_node.is_dir = 1;
 
-	scan_dir(dir_name, &root_node);
+	scan_dir(dir_name, NULL, &root_node);
 
 	gen_map();
 	gen_dep();

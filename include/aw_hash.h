@@ -38,32 +38,49 @@ extern "C" {
 
 #include "aw_types.h"
 
+/**\brief Hash table entry free function*/
 typedef void (*AW_HashFreeFunc)(AW_Ptr key, AW_Ptr value);
+/**\brief Hash table entry traverse function*/
 typedef void (*AW_HashForEachFunc) (AW_Ptr key, AW_Ptr value, AW_Ptr data);
 
+/**\brief Hash table entry*/
 struct AW_HashEntry_s {
-	AW_HashEntry *next;
-	AW_Ptr        key;
-	AW_Ptr        value;
+	AW_HashEntry *next;  /**< The next entry in the list*/
+	AW_Ptr        key;   /**< Key*/
+	AW_Ptr        value; /**< Value*/
 };
 
+/**\brief Hash table*/
 struct AW_Hash_s {
-	AW_KeyFunc      key;
-	AW_EqualFunc    equ;
-	AW_HashFreeFunc release;
-	AW_HashEntry  **entries;
-	AW_Size         count;
-	AW_Size         bucket;
+	AW_KeyFunc      key;     /**< Key calculation function*/
+	AW_EqualFunc    equ;     /**< Key equal compare function*/
+	AW_HashFreeFunc release; /**< Entry release function*/
+	AW_HashEntry  **entries; /**< Entry list buffer*/
+	AW_Size         count;   /**< Entries count in the hash table*/
+	AW_Size         bucket;  /**< List count in the hash table*/
 };
 
+/**\brief Direct key function*/
 extern AW_U32    aw_direct_key (AW_Ptr key);
+/**\brief String key function*/
 extern AW_U32    aw_string_key (AW_Ptr key);
+/**\brief Case-insensitive key function*/
 extern AW_U32    aw_case_string_key (AW_Ptr key);
 
+/**\brief Direct key compare function*/
 extern AW_Bool   aw_direct_equal (AW_Ptr k1, AW_Ptr k2);
+/**\brief String key compare function*/
 extern AW_Bool   aw_string_equal (AW_Ptr k1, AW_Ptr k2);
+/**\brief Case-insensitive key compare function*/
 extern AW_Bool   aw_case_string_equal (AW_Ptr k1, AW_Ptr k2);
 
+/**
+ * \brief Hash table initialize
+ * \param[in] hash Hash table
+ * \param key Key calulation function
+ * \param equ Key compare function
+ * \param release Entry release function
+ */
 extern void      aw_hash_init (AW_Hash *hash,
 					AW_KeyFunc key,
 					AW_EqualFunc equ,
@@ -76,16 +93,54 @@ extern void      aw_hash_init (AW_Hash *hash,
 #define aw_case_string_hash_init(hash, free)\
 	aw_hash_init(hash, aw_case_string_key, aw_case_string_equal, free)
 
+/**
+ * \brief Release a hash table
+ */
 extern void      aw_hash_deinit (AW_Hash *hash);
+
+/**
+ * \brief Add an entry into the hash table
+ * \param[in] hash Hash table
+ * \param key Key
+ * \param value Value
+ * \retval AW_OK The entry is added
+ * \retval AW_NONE An old entry with the same key is already added
+ * \retval <0 On error
+ */
 extern AW_Result aw_hash_add (AW_Hash *hash,
 					AW_Ptr key,
 					AW_Ptr value);
+
+/**
+ * \brief Lookup an entry in the hash table with the key
+ * \param[in] hash The hash table
+ * \param key Key
+ * \param[out] value Return the value
+ * \retval AW_OK The entry is found
+ * \retval AW_NONE Cannot find the entry
+ * \retval <0 On error
+ */
 extern AW_Result aw_hash_lookup (AW_Hash *hash,
 					AW_Ptr key,
 					AW_Ptr *value);
+
+/**
+ * \brief Remove an entry from the hash table
+ * \param[in] hash The hash table
+ * \param key The entry's key to be removed
+ * \retval AW_OK The entry has been removed
+ * \retval AW_NONE Cannot find the entry
+ * \retval <0 On error
+ */
 extern AW_Result aw_hash_remove (AW_Hash *hash,
 					AW_Ptr key);
 
+/**
+ * \brief Hash table entries traverse
+ * \param[in] hash The hash table
+ * \param func The function invoked for each entry
+ * \param data User defined parameter of func
+ */
 extern void      aw_hash_for_each (AW_Hash *hash,
 					AW_HashForEachFunc func,
 					AW_Ptr data);

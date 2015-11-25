@@ -35,7 +35,43 @@
 static const AW_MapNode*
 find_node (const AW_Map *map, const AW_Char *name, AW_Size len)
 {
-	return NULL;
+	const AW_MapNode *n;
+	const AW_MapLink *l;
+	const AW_Char *ch, *chend;
+	int nid = 0;
+	int lid;
+
+	ch  = name;
+	chend = ch + len;
+
+next_node:
+
+	n   = &map->nodes[nid];
+	lid = n->links;
+
+	while (lid != -1) {
+		l = &map->links[lid];
+
+		if (l->chr == *ch) {
+			ch ++;
+			nid = l->node;
+
+			if (ch < chend)
+				goto next_node;
+			else
+				break;
+		}
+
+		lid = l->next;
+	}
+
+	if (!n->name)
+		return NULL;
+
+	if (strncasecmp(n->name, name, len))
+		return NULL;
+
+	return n;
 }
 
 const AW_Class*
