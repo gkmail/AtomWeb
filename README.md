@@ -232,7 +232,7 @@ AtomWeb主要包括：
 
 		integer:100 double:3.1415926 string: hello
 
-* &lt;?r CODE ?&gt;? : 代码在用户数据结构释放时被调用。 
+* &lt;?r CODE ?&gt; : 代码在用户数据结构释放时被调用。 
 	此部分代码主要用于释放用户数据结构中分配的资源。
 	如：
 
