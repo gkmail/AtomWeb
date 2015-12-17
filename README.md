@@ -148,12 +148,12 @@ AtomWeb主要包括：
 
 6. 创建"Makefile",代码如下：
 
-	all: myserver
+		all: myserver
 
-	include myweb.mk #包含aw-scanner生成的makefile
+		include myweb.mk #包含aw-scanner生成的makefile
 
-	myserver: main.c $(AW_SRCS) myweb.c
-		gcc -o $@ $^ -I/usr/include/atomweb -latomweb
+		myserver: main.c $(AW_SRCS) myweb.c
+			gcc -o $@ $^ -I/usr/include/atomweb -latomweb
 
 7. 运行“make”生成"myserver"程序
 
